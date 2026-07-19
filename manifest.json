@@ -7,5 +7,6 @@
   "type": "ui-extension",
   "language": "javascript",
   "lang": "en",
-  "main": "plugin.js"
+  "manifestURI": "https://raw.githubusercontent.com/DefnoJae/seanime-friend-insights/main/manifest.json",
+  "payloadURI": "https://raw.githubusercontent.com/DefnoJae/seanime-friend-insights/main/plugin.js"
 }
