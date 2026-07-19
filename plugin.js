@@ -1,4 +1,26 @@
-function init() {
+/// <reference path="https://raw.githubusercontent.com/5rahim/seanime/refs/heads/main/internal/extension_repo/goja_plugin_types/plugin.d.ts" />
+/// <reference path="https://raw.githubusercontent.com/5rahim/seanime/refs/heads/main/internal/extension_repo/goja_plugin_types/app.d.ts" />
+
+interface AniListUser {
+    name: string;
+    avatar: {
+        medium: string;
+    };
+}
+
+interface MediaListEntry {
+    user: AniListUser;
+    status: string;
+    score: number;
+}
+
+interface AniListResponse {
+    Page?: {
+        mediaList?: MediaListEntry[];
+    };
+}
+
+function init(): void {
     const FRIEND_QUERY = `
     query ($mediaId: Int) {
       Page(page: 1, perPage: 10) {
@@ -17,16 +39,21 @@ function init() {
 
     $ui.register((ctx) => {
         
-        // Define an async polling loop using Seanime's native backend framework
-        async function startTracking() {
-            let currentMediaId = null;
+        async function startTracking(): Promise<void> {
+            let currentMediaId: string | null = null;
 
             while (true) {
-                // Check navigation using the built-in screen/location framework context
-                const match = window.location.pathname.match(/\/anime\/(\d+)/) || 
-                              (window.location.search && window.location.search.match(/[?&]id=(\d+)/));
+                const win = (globalThis as any).window;
+                if (!win) {
+                    await $sleep(2000);
+                    continue;
+                }
+
+                const pathname = win.location.pathname || "";
+                const search = win.location.search || "";
+                const match = pathname.match(/\/anime\/(\d+)/) || search.match(/[?&]id=(\d+)/);
                 
-                let detectedId = null;
+                let detectedId: string | null = null;
                 if (match) {
                     detectedId = match[1];
                 }
@@ -34,15 +61,19 @@ function init() {
                 if (detectedId && detectedId !== currentMediaId) {
                     currentMediaId = detectedId;
 
-                    const oldCard = document.getElementById("seanime-friend-insights-card");
-                    if (oldCard) oldCard.remove();
+                    const doc = win.document;
+                    const oldCard = doc.getElementById("seanime-friend-insights-card");
+                    if (oldCard) {
+                        oldCard.remove();
+                    }
 
-                    const targetContainer = document.querySelector(".anime-description-container") || document.querySelector(".main-layout");
+                    const targetContainer = doc.querySelector(".anime-description-container") || doc.querySelector(".main-layout");
                     
                     if (targetContainer) {
                         try {
-                            const token = localStorage.getItem("seanime-anilist-token") || "";
-                            const response = await $anilist.customQuery({
+                            const token = win.localStorage.getItem("seanime-anilist-token") || "";
+                            
+                            const response = await $anilist.customQuery<AniListResponse>({
                                 query: FRIEND_QUERY,
                                 variables: { mediaId: parseInt(currentMediaId) }
                             }, token);
@@ -58,7 +89,6 @@ function init() {
                     }
                 }
                 
-                // Use Seanime's server-safe sleep function instead of setInterval
                 await $sleep(1500);
             }
         }
@@ -69,10 +99,21 @@ function init() {
     });
 }
 
-function renderFriendCard(activities) {
+function renderFriendCard(activities: MediaListEntry[]): string {
     const primary = activities[0];
     const hasMore = activities.length > 1;
+    
     const cleanStatus = primary.status.charAt(0).toUpperCase() + primary.status.slice(1).toLowerCase();
+    
+    let scoreText = "Unrated";
+    if (primary.score > 0) {
+        scoreText = primary.score + " / 10";
+    }
+
+    let moreTag = "";
+    if (hasMore) {
+        moreTag = '<div class="more-friends-tag">+ more friends</div>';
+    }
 
     return `
         <div id="seanime-friend-insights-card" class="friend-card-container">
@@ -89,9 +130,9 @@ function renderFriendCard(activities) {
             </div>
             <div class="friend-rating-section">
                 <span class="friend-label">Rating</span>
-                <span class="friend-value">${primary.score > 0 ? \`\${primary.score} / 10\` : "Unrated"}</span>
+                <span class="friend-value">${scoreText}</span>
             </div>
-            \${hasMore ? \`<div class="more-friends-tag">+ more friends</div>\` : ""}
+            ${moreTag}
         </div>
         <style>
             .friend-card-container {
