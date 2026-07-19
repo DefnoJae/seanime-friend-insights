@@ -1,5 +1,4 @@
 function init() {
-    // GraphQL query to look up the friend activity for a specific media ID
     const FRIEND_QUERY = `
     query ($mediaId: Int) {
       Page(page: 1, perPage: 10) {
@@ -16,29 +15,32 @@ function init() {
       }
     }`;
 
-    // Register our logic into Seanime's UI runtime thread context
     $ui.register((ctx) => {
         
-        // Listen for when the browser DOM is fully rendered
-        ctx.dom.onReady(() => {
+        // Define an async polling loop using Seanime's native backend framework
+        async function startTracking() {
             let currentMediaId = null;
 
-            // Monitor navigation state changes internally
-            setInterval(async () => {
-                const match = window.location.pathname.match(/\/anime\/(\d+)/);
-                if (match && match[1] !== currentMediaId) {
-                    currentMediaId = match[1];
+            while (true) {
+                // Check navigation using the built-in screen/location framework context
+                const match = window.location.pathname.match(/\/anime\/(\d+)/) || 
+                              (window.location.search && window.location.search.match(/[?&]id=(\d+)/));
+                
+                let detectedId = null;
+                if (match) {
+                    detectedId = match[1];
+                }
 
-                    // Clear any card from a previously viewed anime page
+                if (detectedId && detectedId !== currentMediaId) {
+                    currentMediaId = detectedId;
+
                     const oldCard = document.getElementById("seanime-friend-insights-card");
                     if (oldCard) oldCard.remove();
 
-                    // Targets the main anime layout area to inject under
                     const targetContainer = document.querySelector(".anime-description-container") || document.querySelector(".main-layout");
                     
                     if (targetContainer) {
                         try {
-                            // Using the server-side authorized $anilist custom query handler
                             const token = localStorage.getItem("seanime-anilist-token") || "";
                             const response = await $anilist.customQuery({
                                 query: FRIEND_QUERY,
@@ -55,12 +57,18 @@ function init() {
                         }
                     }
                 }
-            }, 1500);
+                
+                // Use Seanime's server-safe sleep function instead of setInterval
+                await $sleep(1500);
+            }
+        }
+
+        ctx.dom.onReady(() => {
+            startTracking();
         });
     });
 }
 
-// Visual markup generator matching your glass card layout design
 function renderFriendCard(activities) {
     const primary = activities[0];
     const hasMore = activities.length > 1;
@@ -81,9 +89,9 @@ function renderFriendCard(activities) {
             </div>
             <div class="friend-rating-section">
                 <span class="friend-label">Rating</span>
-                <span class="friend-value">${primary.score > 0 ? `${primary.score} / 10` : "Unrated"}</span>
+                <span class="friend-value">${primary.score > 0 ? \`\${primary.score} / 10\` : "Unrated"}</span>
             </div>
-            ${hasMore ? `<div class="more-friends-tag">+ more friends</div>` : ""}
+            \${hasMore ? \`<div class="more-friends-tag">+ more friends</div>\` : ""}
         </div>
         <style>
             .friend-card-container {
