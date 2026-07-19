@@ -3,12 +3,12 @@
   "name": "AniList Friend Insights",
   "version": "1.0.0",
   "description": "Displays what friends thought about the selected anime directly on the media page.",
-  "author": "Defnotjae",
+  "author": "Jordan Willory",
   "type": "plugin",
-  "language": "javascript",
+  "language": "typescript",
   "lang": "en",
   "manifestURI": "https://raw.githubusercontent.com/DefnoJae/seanime-friend-insights/main/manifest.json",
-  "payloadURI": "https://raw.githubusercontent.com/DefnoJae/seanime-friend-insights/main/plugin.js",
+  "payloadURI": "https://raw.githubusercontent.com/DefnoJae/seanime-friend-insights/main/seanime-friend-insights.ts",
   "plugin": {
     "version": "1",
     "permissions": {
