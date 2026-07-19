@@ -3,9 +3,7 @@
 
 interface AniListUser {
     name: string;
-    avatar: {
-        medium: string;
-    };
+    avatar: { medium: string };
 }
 
 interface MediaListEntry {
@@ -15,26 +13,113 @@ interface MediaListEntry {
 }
 
 interface AniListResponse {
-    Page?: {
-        mediaList?: MediaListEntry[];
-    };
+    Page?: { mediaList?: MediaListEntry[] };
+}
+
+const FRIEND_QUERY = `
+query ($mediaId: Int) {
+  Page(page: 1, perPage: 10) {
+    mediaList(mediaId: $mediaId, isFollowing: true) {
+      user {
+        name
+        avatar { medium }
+      }
+      status
+      score(format: POINT_10)
+    }
+  }
+}`;
+
+// Move CSS to a constant to avoid confusing the compiler inside the HTML string
+const STYLE_BLOCK = `
+<style>
+    .friend-card-container {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 12px 20px;
+        gap: 25px;
+        margin-top: 15px;
+    }
+    .friend-profile-section { display: flex; align-items: center; gap: 10px; }
+    .friend-avatar { width: 40px; height: 40px; border-radius: 5px; object-fit: cover; }
+    .friend-info, .friend-status-section, .friend-rating-section { display: flex; flex-direction: column; }
+    .friend-label { color: rgba(255, 255, 255, 0.4); font-size: 11px; text-transform: uppercase; }
+    .friend-value { color: #ffffff; font-weight: 500; font-size: 14px; }
+    .more-friends-tag { color: #3db4f2; font-size: 13px; margin-left: auto; }
+</style>
+`;
+
+function renderFriendCard(activities: MediaListEntry[]): string {
+    const primary = activities[0];
+    const hasMore = activities.length > 1;
+    const cleanStatus = primary.status.charAt(0).toUpperCase() + primary.status.slice(1).toLowerCase();
+    const scoreText = primary.score > 0 ? (primary.score + " / 10") : "Unrated";
+    const moreTag = hasMore ? '<div class="more-friends-tag">+' + (activities.length - 1) + ' more</div>' : "";
+
+    return '<div id="seanime-friend-insights-card" class="friend-card-container">' +
+        '<div class="friend-profile-section">' +
+            '<img src="' + primary.user.avatar.medium + '" class="friend-avatar"/>' +
+            '<div class="friend-info"><span class="friend-label">Friend</span><span class="friend-value">' + primary.user.name + '</span></div>' +
+        '</div>' +
+        '<div class="friend-status-section"><span class="friend-label">Status</span><span class="friend-value">' + cleanStatus + '</span></div>' +
+        '<div class="friend-rating-section"><span class="friend-label">Rating</span><span class="friend-value">' + scoreText + '</span></div>' +
+        moreTag +
+    '</div>' + STYLE_BLOCK;
 }
 
 function init(): void {
-    const FRIEND_QUERY = `
-    query ($mediaId: Int) {
-      Page(page: 1, perPage: 10) {
-        mediaList(mediaId: $mediaId, isFollowing: true) {
-          user {
-            name
-            avatar {
-              medium
+    $ui.register((ctx) => {
+        ctx.dom.onReady(async () => {
+            let currentMediaId: string | null = null;
+
+            while (true) {
+                const win = (globalThis as any).window;
+                if (!win) {
+                    await $sleep(2000);
+                    continue;
+                }
+
+                const pathname = win.location.pathname || "";
+                const search = win.location.search || "";
+                const match = pathname.match(/\/anime\/(\d+)/) || search.match(/[?&]id=(\d+)/);
+                const detectedId = match ? match[1] : null;
+
+                if (detectedId && detectedId !== currentMediaId) {
+                    currentMediaId = detectedId;
+                    
+                    // Remove existing card
+                    const doc = win.document;
+                    const oldCard = doc.getElementById("seanime-friend-insights-card");
+                    if (oldCard) oldCard.remove();
+
+                    // Find container
+                    const target = doc.querySelector(".anime-description-container") || doc.querySelector(".main-layout");
+                    
+                    if (target) {
+                        try {
+                            const token = win.localStorage.getItem("seanime-anilist-token") || "";
+                            const response = await $anilist.customQuery<AniListResponse>({
+                                query: FRIEND_QUERY,
+                                variables: { mediaId: parseInt(detectedId) }
+                            }, token);
+
+                            const entries = response?.Page?.mediaList || [];
+                            if (entries.length > 0) {
+                                target.insertAdjacentHTML("afterend", renderFriendCard(entries));
+                            }
+                        } catch (e) {
+                            console.error("Friend Insights Error:", e);
+                        }
+                    }
+                }
+                await $sleep(2000);
             }
-          }
-          status
-          score(format: POINT_10)
-        }
-      }
+        });
+    });
+}      }
     }`;
 
     $ui.register((ctx) => {
