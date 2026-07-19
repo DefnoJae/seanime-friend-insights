@@ -1,7 +1,7 @@
 {
   "id": "seanime-friend-insights",
   "name": "AniList Friend Insights",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Displays what friends thought about the selected anime directly on the media page.",
   "author": "uncle",
   "type": "plugin",
