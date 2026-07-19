@@ -1,0 +1,10 @@
+{
+  "id": "seanime-friend-insights",
+  "name": "AniList Friend Insights",
+  "version": "1.0.0",
+  "description": "Displays what friends thought about the selected anime directly on the media page.",
+  "author": "Jordan Willory",
+  "type": "ui-extension",
+  "main": "plugin.js",
+  "runtime": "javascript"
+}
