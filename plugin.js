@@ -43,6 +43,153 @@ function init(): void {
             let currentMediaId: string | null = null;
 
             while (true) {
+                // Accessing the window context safely
+                const win = (globalThis as any).window;
+                if (!win) {
+                    await $sleep(2000);
+                    continue;
+                }
+
+                const pathname = win.location.pathname || "";
+                // Match /anime/123 or /entry?id=123
+                const match = pathname.match(/\/anime\/(\d+)/) || win.location.search.match(/[?&]id=(\d+)/);
+                
+                let detectedId: string | null = null;
+                if (match) {
+                    detectedId = match[1];
+                }
+
+                // If we are on a new anime page
+                if (detectedId && detectedId !== currentMediaId) {
+                    currentMediaId = detectedId;
+
+                    const doc = win.document;
+                    
+                    // Remove any existing card from previous navigation
+                    doc.getElementById("seanime-friend-insights-card")?.remove();
+
+                    // Find where to inject the card
+                    const targetContainer = doc.querySelector(".anime-description-container") || doc.querySelector("#media-description-section");
+                    
+                    if (targetContainer) {
+                        try {
+                            // Seanime usually stores the token in localStorage, but we check if it exists
+                            const token = win.localStorage.getItem("seanime-anilist-token");
+                            
+                            if (!token) {
+                                console.warn("[Friend Insights]: No AniList token found. User might not be logged in.");
+                                await $sleep(5000); // Wait longer if not logged in
+                                continue;
+                            }
+
+                            const response = await $anilist.customQuery<AniListResponse>({
+                                query: FRIEND_QUERY,
+                                variables: { mediaId: parseInt(currentMediaId) }
+                            }, token);
+
+                            const activities = response?.Page?.mediaList || [];
+                            
+                            // Only render if friends actually have data
+                            if (activities.length > 0 && !doc.getElementById("seanime-friend-insights-card")) {
+                                const cardHtml = renderFriendCard(activities);
+                                targetContainer.insertAdjacentHTML("afterend", cardHtml);
+                            }
+                        } catch (err) {
+                            console.error("[Friend Insights Plugin Error]:", err);
+                        }
+                    }
+                }
+                
+                // Poll every 1.5 seconds to detect navigation changes
+                await $sleep(1500);
+            }
+        }
+
+        ctx.dom.onReady(() => {
+            startTracking();
+        });
+    });
+}
+
+function renderFriendCard(activities: MediaListEntry[]): string {
+    // Focus on the first friend found
+    const primary = activities[0];
+    const otherCount = activities.length - 1;
+    
+    const cleanStatus = primary.status.replace(/_/g, ' ').toLowerCase();
+    const formattedStatus = cleanStatus.charAt(0).toUpperCase() + cleanStatus.slice(1);
+    
+    let scoreText = "Unrated";
+    if (primary.score > 0) {
+        scoreText = `${primary.score}/10`;
+    }
+
+    const moreTag = otherCount > 0 
+        ? `<div class="more-friends-tag">+ ${otherCount} other friend${otherCount > 1 ? 's' : ''}</div>` 
+        : "";
+
+    return `
+        <div id="seanime-friend-insights-card" class="friend-card-container">
+            <div class="friend-profile-section">
+                <img src="${primary.user.avatar.medium}" alt="${primary.user.name}" class="friend-avatar"/>
+                <div class="friend-info">
+                    <span class="friend-label">Friend</span>
+                    <span class="friend-value">${primary.user.name}</span>
+                </div>
+            </div>
+            <div class="friend-status-section">
+                <span class="friend-label">Status</span>
+                <span class="friend-value">${formattedStatus}</span>
+            </div>
+            <div class="friend-rating-section">
+                <span class="friend-label">Rating</span>
+                <span class="friend-value">${scoreText}</span>
+            </div>
+            ${moreTag}
+        </div>
+        <style>
+            .friend-card-container {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                background: rgba(255, 255, 255, 0.03);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 12px;
+                padding: 16px;
+                gap: 24px;
+                margin-top: 20px;
+                margin-bottom: 10px;
+                font-family: inherit;
+            }
+            .friend-profile-section { display: flex; align-items: center; gap: 12px; }
+            .friend-avatar { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #3db4f2; object-fit: cover; }
+            .friend-info, .friend-status-section, .friend-rating-section { display: flex; flex-direction: column; gap: 4px; }
+            .friend-label { color: rgba(255, 255, 255, 0.5); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }
+            .friend-value { color: #ffffff; font-weight: 600; font-size: 0.9rem; }
+            .more-friends-tag { 
+                margin-left: auto;
+                background: rgba(61, 180, 242, 0.1);
+                color: #3db4f2;
+                padding: 4px 10px;
+                border-radius: 20px;
+                font-size: 0.8rem;
+                font-weight: 500;
+            }
+            @media (max-width: 640px) {
+                .friend-card-container { gap: 16px; justify-content: space-between; }
+                .more-friends-tag { width: 100%; text-align: center; margin-top: 8px; }
+            }
+        </style>
+    `;
+}      }
+    }`;
+
+    $ui.register((ctx) => {
+        
+        async function startTracking(): Promise<void> {
+            let currentMediaId: string | null = null;
+
+            while (true) {
                 const win = (globalThis as any).window;
                 if (!win) {
                     await $sleep(2000);
