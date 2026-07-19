@@ -8,7 +8,7 @@
   "language": "typescript",
   "lang": "en",
   "manifestURI": "https://raw.githubusercontent.com/DefnoJae/seanime-friend-insights/main/manifest.json",
-  "payloadURI": "https://raw.githubusercontent.com/DefnoJae/seanime-friend-insights/main/seanime-friend-insights.ts",
+  "payloadURI": "https://raw.githubusercontent.com/DefnoJae/seanime-friend-insights/main/plugin.js",
   "plugin": {
     "version": "1",
     "permissions": {
