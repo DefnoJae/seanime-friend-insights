@@ -3,10 +3,28 @@
   "name": "AniList Friend Insights",
   "version": "1.0.0",
   "description": "Displays what friends thought about the selected anime directly on the media page.",
-  "author": "Jordan Willory",
-  "type": "ui-extension",
+  "author": "Defnotjae",
+  "type": "plugin",
   "language": "javascript",
   "lang": "en",
   "manifestURI": "https://raw.githubusercontent.com/DefnoJae/seanime-friend-insights/main/manifest.json",
-  "payloadURI": "https://raw.githubusercontent.com/DefnoJae/seanime-friend-insights/main/plugin.js"
+  "payloadURI": "https://raw.githubusercontent.com/DefnoJae/seanime-friend-insights/main/plugin.js",
+  "plugin": {
+    "version": "1",
+    "permissions": {
+      "scopes": ["anilist"],
+      "allow": {
+        "networkAccess": {
+          "allowedDomains": ["graphql.anilist.co"],
+          "reasoning": "Required to check AniList friend activity for the selected anime."
+        },
+        "unsafeFlags": [
+          {
+            "flag": "dom-script-manipulation",
+            "reason": "Allows rendering the dynamic UI friend insight card on the page layout."
+          }
+        ]
+      }
+    }
+  }
 }
