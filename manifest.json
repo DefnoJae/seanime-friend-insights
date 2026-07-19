@@ -3,7 +3,7 @@
   "name": "AniList Friend Insights",
   "version": "1.0.2",
   "description": "Displays what friends thought about the selected anime directly on the media page.",
-  "author": "Defnotjae",
+  "author": "uncle",
   "type": "plugin",
   "language": "typescript",
   "lang": "en",
